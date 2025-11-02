@@ -5,7 +5,7 @@ from typing import List, Optional, Any, Dict
 
 from .db import get_db
 from .memory import fetch_session_history, append_session_turn
-from .agent import run_react_agent, run_qa, run_summary, run_extract, route_task
+from .agent import run_react_agent, run_qa, run_summary, run_extract, route_task, run_specialized_agent
 from .vector_store import upsert_vectors
 from .llm import embed_texts
 
@@ -151,6 +151,12 @@ class BasicResponse(BaseModel):
     sources: List[Dict[str, Any]]
 
 
+class SpecializedResponse(BaseModel):
+    answer: str
+    sources: List[Dict[str, Any]]
+    agent_type: str
+
+
 @app.post("/qa", response_model=BasicResponse)
 async def qa_endpoint(body: BasicRequest) -> BasicResponse:
     result = await run_qa(body.query, body.top_k)
@@ -191,5 +197,59 @@ async def route_endpoint(body: BasicRequest) -> BasicResponse:
     if not result.get("answer"):
         raise HTTPException(status_code=500, detail="Empty answer")
     return BasicResponse(answer=result["answer"], sources=result.get("sources", []))
+
+
+class SpecializedQueryRequest(BaseModel):
+    session_id: Optional[str] = None
+    query: str = Field(min_length=1)
+    top_k: int = Field(default=4, ge=1, le=20)
+
+
+@app.post("/specialized-agent", response_model=SpecializedResponse)
+async def specialized_agent_endpoint(body: SpecializedQueryRequest) -> SpecializedResponse:
+    """
+    New specialized agent endpoint with intelligent routing.
+    
+    Automatically selects the best agent (TRENDS, STRATEGY, or ANALYSIS) based on query intent.
+    """
+    if not body.query:
+        raise HTTPException(status_code=400, detail="query is required")
+
+    # Load prior memory if session_id provided
+    history: List[Dict[str, str]] = []
+    if body.session_id:
+        history = await fetch_session_history(session_id=body.session_id)
+
+    try:
+        result = await run_specialized_agent(
+            user_query=body.query,
+            session_id=body.session_id or "",
+            history=history,
+            top_k=body.top_k,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Agent failure: {exc}")
+
+    answer: str = result.get("answer", "")
+    sources: List[Dict[str, Any]] = result.get("sources", [])
+    agent_type: str = result.get("agent_type", "ANALYSIS")
+
+    if not answer:
+        raise HTTPException(status_code=500, detail="Agent returned empty answer")
+
+    # Persist turn if session_id provided
+    if body.session_id:
+        await append_session_turn(
+            session_id=body.session_id,
+            user_content=body.query,
+            assistant_content=answer,
+            sources=sources,
+        )
+
+    return SpecializedResponse(
+        answer=answer,
+        sources=sources,
+        agent_type=agent_type
+    )
 
 

@@ -111,11 +111,168 @@ async def run_extract(query: str, top_k: int, schema_hint: str = "", source_file
 
 
 async def route_task(query: str) -> str:
+    """Simple keyword-based routing."""
     lower_q = query.lower()
     if any(k in lower_q for k in ["extract", "json", "schema", "swot", "market size", "competitors"]):
         return "EXTRACT"
     if any(k in lower_q for k in ["summarize", "summary", "findings", "key takeaways"]):
         return "SUMMARY"
     return "QA"
+
+
+# ===== SPECIALIZED AGENTS FOR MARKET ANALYSIS =====
+
+MARKET_TRENDS_PROMPT = (
+    "You are an expert market trends analyst. Focus on identifying patterns, "
+    "emerging trends, growth trajectories, market movements, and future forecasts. "
+    "Provide insights on market dynamics, consumer behavior shifts, and industry evolution. "
+    "Use only provided source chunks when citing. Structure responses with clear trend analysis."
+)
+
+STRATEGY_PROMPT = (
+    "You are a strategic business advisor specializing in market strategies. "
+    "Focus on actionable recommendations, competitive positioning, go-to-market strategies, "
+    "and tactical approaches. Provide strategic insights and actionable advice based on market data. "
+    "Use only provided source chunks when citing."
+)
+
+ANALYSIS_PROMPT = (
+    "You are a deep market analyst who provides comprehensive analysis. "
+    "Focus on detailed examination of market data, competitive landscape, "
+    "SWOT analysis, financial metrics, and multi-dimensional insights. "
+    "Break down complex data into clear, structured analysis. "
+    "Use only provided source chunks when citing."
+)
+
+ROUTER_SYSTEM_PROMPT = (
+    "You are an intelligent routing agent. Analyze the user's query and determine which "
+    "specialized agent should handle it:\n"
+    "- TRENDS: Questions about market trends, growth patterns, emerging developments, forecasts, dynamics\n"
+    "- STRATEGY: Questions about strategic recommendations, competitive positioning, tactics, go-to-market plans\n"
+    "- ANALYSIS: Requests for deep analysis, SWOT, competitive landscape, detailed insights, financial metrics\n"
+    "\nRespond with ONLY one word: TRENDS, STRATEGY, or ANALYSIS"
+)
+
+
+async def _router_node(state: AgentState) -> AgentState:
+    """Reasoning node to decide which agent to use."""
+    query: str = state["query"]
+    
+    # Use LLM to intelligently route the query
+    routing_message = [
+        {"role": "user", "content": f"Classify this query: {query}"}
+    ]
+    
+    try:
+        decision = await chat_complete(system_prompt=ROUTER_SYSTEM_PROMPT, messages=routing_message)
+        decision = decision.strip().upper()
+        
+        # Validate decision
+        if decision not in ["TRENDS", "STRATEGY", "ANALYSIS"]:
+            # Fallback to keyword-based routing
+            decision = await route_task(query)
+            if decision == "EXTRACT":
+                decision = "ANALYSIS"
+            elif decision == "SUMMARY":
+                decision = "TRENDS"
+            else:
+                decision = "ANALYSIS"  # Default to analysis for deep dive
+        
+        state["agent_type"] = decision
+    except Exception:
+        # Fallback to keyword routing on error
+        state["agent_type"] = "ANALYSIS"
+    
+    return state
+
+
+async def _retrieve_context_node(state: AgentState) -> AgentState:
+    """Retrieve relevant context based on agent type."""
+    query: str = state["query"]
+    top_k: int = state["top_k"]
+    source_file: str = state.get("source_file")
+    agent_type: str = state.get("agent_type", "ANALYSIS")
+
+    # Enhance query based on agent specialization
+    enhanced_query = query
+    if agent_type == "TRENDS":
+        enhanced_query = f"market trends, growth patterns, forecasts: {query}"
+    elif agent_type == "STRATEGY":
+        enhanced_query = f"strategic recommendations, competitive positioning, tactics: {query}"
+    elif agent_type == "ANALYSIS":
+        enhanced_query = f"detailed analysis, competitive landscape, SWOT: {query}"
+
+    q_vec = await embed_texts([enhanced_query])
+    retrieved = await similarity_search(query_embedding=q_vec[0], top_k=top_k, source_file=source_file)
+
+    state["retrieved_docs"] = [doc for _, doc in retrieved]
+    return state
+
+
+async def _specialized_agent_node(state: AgentState) -> AgentState:
+    """Specialized agent reasoning node."""
+    agent_type: str = state.get("agent_type", "ANALYSIS")
+    history: List[Dict[str, str]] = state.get("history", [])
+    query: str = state["query"]
+
+    # Select appropriate system prompt
+    if agent_type == "TRENDS":
+        system_prompt = MARKET_TRENDS_PROMPT
+    elif agent_type == "STRATEGY":
+        system_prompt = STRATEGY_PROMPT
+    else:  # ANALYSIS
+        system_prompt = ANALYSIS_PROMPT
+
+    chunks = state.get("retrieved_docs", [])
+    chunk_texts = []
+    sources = []
+    for doc in chunks:
+        text = doc.get("text", "")
+        chunk_id = doc.get("chunk_id", "")
+        section = doc.get("metadata", {}).get("section", "")
+        chunk_texts.append(f"[chunk_id={chunk_id}, section={section}]\n{text}")
+        sources.append({"chunk_id": chunk_id, "section": section})
+
+    messages = history + [
+        {"role": "user", "content": f"CONTEXT:\n" + "\n\n".join(chunk_texts)},
+        {"role": "user", "content": query},
+    ]
+
+    answer = await chat_complete(system_prompt=system_prompt, messages=messages)
+
+    state["answer"] = answer
+    state["sources"] = sources
+    return state
+
+
+async def run_specialized_agent(
+    user_query: str,
+    session_id: str,
+    history: List[Dict[str, str]],
+    top_k: int,
+    source_file: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    New specialized ReAct agent with intelligent routing.
+    
+    Flow: Router -> Retrieve -> Specialized Agent -> Answer
+    """
+    state: AgentState = AgentState({
+        "query": user_query,
+        "history": history,
+        "top_k": top_k,
+        "source_file": source_file,
+    })
+    
+    # Execute: Router -> Retrieve -> Specialized Reasoning
+    state = await _router_node(state)
+    state = await _retrieve_context_node(state)
+    state = await _specialized_agent_node(state)
+    
+    return {
+        "answer": state.get("answer", ""),
+        "sources": state.get("sources", []),
+        "agent_type": state.get("agent_type", "ANALYSIS")
+    }
 
 
