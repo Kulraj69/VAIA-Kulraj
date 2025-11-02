@@ -211,7 +211,8 @@ def run_chat(query: str, top_k: int) -> Tuple[str, List[Dict[str, Any]]]:
             sources=sources,
         )
     )
-    # Mirror history for UI-only display (user message is already added in main())
+    # Add both messages to UI history after processing
+    st.session_state.chat_history.append({"role": "user", "content": query})
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
     return answer, sources
 
@@ -359,15 +360,13 @@ def main() -> None:
     placeholder_text = "Ask about your documents…" if active_doc else "Please ingest a PDF first to start chatting."
     user_msg = st.chat_input(placeholder_text, disabled=not active_doc)
     if user_msg and active_doc:
-        # Display user message immediately
-        st.chat_message("user").write(user_msg)
-        # Add user message to history immediately for display
-        st.session_state.chat_history.append({"role": "user", "content": user_msg})
-        
         with st.spinner("Thinking…"):
             answer, sources = run_chat(user_msg, top_k)
+        
+        # Display both messages after processing
+        st.chat_message("user").write(user_msg)
         st.chat_message("assistant").write(answer)
-        # Assistant message is already added in run_chat, so we don't need to add it again here
+        
         if show_sources and sources:
             with st.expander("Sources"):
                 st.json(sources)
