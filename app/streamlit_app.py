@@ -19,15 +19,8 @@ sys.path.insert(0, str(project_root))
 def load_secrets_to_env():
     """Load secrets from Streamlit secrets.toml into os.environ."""
     try:
-        # ChromaDB secrets
-        if "chromadb" in st.secrets:
-            if "api_key" in st.secrets["chromadb"]:
-                os.environ["CHROMADB_API_KEY"] = st.secrets["chromadb"]["api_key"]
-            if "tenant" in st.secrets["chromadb"]:
-                os.environ["CHROMADB_TENANT"] = st.secrets["chromadb"]["tenant"]
-            if "database" in st.secrets["chromadb"]:
-                os.environ["CHROMADB_DATABASE"] = st.secrets["chromadb"]["database"]
-        
+    
+    
         # Azure OpenAI secrets
         if "azure_openai" in st.secrets:
             if "endpoint" in st.secrets["azure_openai"]:
