@@ -2,6 +2,15 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict
+from pathlib import Path
+
+# Load environment variables
+from dotenv import load_dotenv
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=str(env_path), override=True)
+else:
+    load_dotenv(override=True)
 
 from .db import get_db
 from .memory import fetch_session_history, append_session_turn
