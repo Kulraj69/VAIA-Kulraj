@@ -14,13 +14,37 @@ import streamlit as st
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Load credentials from Streamlit secrets and set as environment variables
-# This allows the rest of the app to continue using os.environ
+# Import app modules - will be initialized properly in main()
+from app.agent import run_react_agent, run_qa, run_summary, run_extract
+from app.db import get_db
+from app.llm import embed_texts
+from app.memory import fetch_session_history, append_session_turn
+from app.vector_store import upsert_vectors
+
+
+# ---- UI constants (avoid hard-coded literals in logic) ----
+APP_TITLE: str = "VAIA — Document Chat"
+SIDEBAR_TITLE: str = "Ingest PDF"
+DEFAULT_SECTION: str = "document"
+DEFAULT_MAX_CHARS: int = 2000
+DEFAULT_OVERLAP_CHARS: int = 200
+TOP_K_MIN: int = 1
+TOP_K_MAX: int = 20
+TOP_K_DEFAULT: int = 4
+CHAT_MODE: str = "Chat with Docs"
+QA_MODE: str = "Basic Q&A"
+SUMMARY_MODE: str = "Summarize"
+EXTRACT_MODE: str = "Extract"
+SHOW_SOURCES_LABEL: str = "Show sources"
+
+
+_ASYNC_LOOP: Optional[asyncio.AbstractEventLoop] = None
+_ASYNC_THREAD: Optional[threading.Thread] = None
+
+
 def load_secrets_to_env():
     """Load secrets from Streamlit secrets.toml into os.environ."""
     try:
-    
-    
         # Azure OpenAI secrets
         if "azure_openai" in st.secrets:
             if "endpoint" in st.secrets["azure_openai"]:
@@ -49,35 +73,6 @@ def load_secrets_to_env():
         env_path = project_root / ".env"
         if env_path.exists():
             load_dotenv(dotenv_path=str(env_path), override=True)
-
-# Load secrets on import
-load_secrets_to_env()
-
-from app.agent import run_react_agent, run_qa, run_summary, run_extract
-from app.db import get_db
-from app.llm import embed_texts
-from app.memory import fetch_session_history, append_session_turn
-from app.vector_store import upsert_vectors
-
-
-# ---- UI constants (avoid hard-coded literals in logic) ----
-APP_TITLE: str = "VAIA — Document Chat"
-SIDEBAR_TITLE: str = "Ingest PDF"
-DEFAULT_SECTION: str = "document"
-DEFAULT_MAX_CHARS: int = 2000
-DEFAULT_OVERLAP_CHARS: int = 200
-TOP_K_MIN: int = 1
-TOP_K_MAX: int = 20
-TOP_K_DEFAULT: int = 4
-CHAT_MODE: str = "Chat with Docs"
-QA_MODE: str = "Basic Q&A"
-SUMMARY_MODE: str = "Summarize"
-EXTRACT_MODE: str = "Extract"
-SHOW_SOURCES_LABEL: str = "Show sources"
-
-
-_ASYNC_LOOP: Optional[asyncio.AbstractEventLoop] = None
-_ASYNC_THREAD: Optional[threading.Thread] = None
 
 
 def _ensure_async_loop() -> asyncio.AbstractEventLoop:
@@ -295,6 +290,9 @@ def sidebar_ingest() -> None:
 
 
 def main() -> None:
+    # Load secrets first before initializing anything that needs env vars
+    load_secrets_to_env()
+    
     _init_session_state()
     st.set_page_config(page_title=APP_TITLE, page_icon="📄", layout="wide")
 
