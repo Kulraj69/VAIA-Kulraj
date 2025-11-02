@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Streamlit secrets
+.streamlit/secrets.toml
+.secrets.toml
+
 # Python
 __pycache__/
 *.py[cod]
@@ -48,5 +52,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
 
 

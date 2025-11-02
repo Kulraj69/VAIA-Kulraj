@@ -9,19 +9,56 @@ import threading
 from concurrent.futures import Future
 
 import streamlit as st
-from dotenv import load_dotenv
 
 # Add parent directory to path for imports
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Load environment variables from project root .env
-env_path = project_root / ".env"
-if env_path.exists():
-    load_dotenv(dotenv_path=str(env_path), override=True)
-else:
-    # Try loading from current directory as fallback
-    load_dotenv(override=True)
+# Load credentials from Streamlit secrets and set as environment variables
+# This allows the rest of the app to continue using os.environ
+def load_secrets_to_env():
+    """Load secrets from Streamlit secrets.toml into os.environ."""
+    try:
+        # ChromaDB secrets
+        if "chromadb" in st.secrets:
+            if "api_key" in st.secrets["chromadb"]:
+                os.environ["CHROMADB_API_KEY"] = st.secrets["chromadb"]["api_key"]
+            if "tenant" in st.secrets["chromadb"]:
+                os.environ["CHROMADB_TENANT"] = st.secrets["chromadb"]["tenant"]
+            if "database" in st.secrets["chromadb"]:
+                os.environ["CHROMADB_DATABASE"] = st.secrets["chromadb"]["database"]
+        
+        # Azure OpenAI secrets
+        if "azure_openai" in st.secrets:
+            if "endpoint" in st.secrets["azure_openai"]:
+                os.environ["AZURE_OPENAI_ENDPOINT"] = st.secrets["azure_openai"]["endpoint"]
+            if "deployment" in st.secrets["azure_openai"]:
+                os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT"] = st.secrets["azure_openai"]["deployment"]
+                # Use separate embed_deployment if provided, otherwise use same as chat deployment
+                if "embed_deployment" in st.secrets["azure_openai"]:
+                    os.environ["AZURE_OPENAI_EMBED_DEPLOYMENT"] = st.secrets["azure_openai"]["embed_deployment"]
+                else:
+                    os.environ["AZURE_OPENAI_EMBED_DEPLOYMENT"] = st.secrets["azure_openai"]["deployment"]
+            if "api_key" in st.secrets["azure_openai"]:
+                os.environ["AZURE_OPENAI_API_KEY"] = st.secrets["azure_openai"]["api_key"]
+            if "api_version" in st.secrets["azure_openai"]:
+                os.environ["AZURE_OPENAI_API_VERSION"] = st.secrets["azure_openai"]["api_version"]
+        
+        # MongoDB secrets (if present)
+        if "mongodb" in st.secrets:
+            if "uri" in st.secrets["mongodb"]:
+                os.environ["MONGODB_URI"] = st.secrets["mongodb"]["uri"]
+            if "database" in st.secrets["mongodb"]:
+                os.environ["MONGO_DB_NAME"] = st.secrets["mongodb"]["database"]
+    except AttributeError:
+        # Secrets not available, try loading from .env as fallback
+        from dotenv import load_dotenv
+        env_path = project_root / ".env"
+        if env_path.exists():
+            load_dotenv(dotenv_path=str(env_path), override=True)
+
+# Load secrets on import
+load_secrets_to_env()
 
 from app.agent import run_react_agent, run_qa, run_summary, run_extract
 from app.db import get_db
@@ -127,11 +164,6 @@ def _extract_pdf_text(data: bytes) -> str:
 
 
 def ingest_pdf(file_name: str, data: bytes, cfg: IngestConfig) -> int:
-    # Ensure environment variables are loaded before using them
-    env_path = Path(__file__).parent.parent / ".env"
-    if env_path.exists():
-        load_dotenv(dotenv_path=str(env_path), override=True)
-    
     content: str = _extract_pdf_text(data)
     parts: List[str] = _chunk_text(content, cfg.max_chars, cfg.overlap_chars)
     vectors = run_async(embed_texts(parts))
@@ -206,16 +238,12 @@ def _verify_env_vars() -> None:
     ]
     missing = [var for var in required_vars if not os.environ.get(var)]
     if missing:
-        # Try reloading .env file
-        env_path = Path(__file__).parent.parent / ".env"
-        if env_path.exists():
-            load_dotenv(dotenv_path=str(env_path), override=True)
-        else:
-            load_dotenv(override=True)
+        # Try reloading secrets
+        load_secrets_to_env()
         # Check again after reload
         missing = [var for var in required_vars if not os.environ.get(var)]
         if missing:
-            raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}. Please check your .env file.")
+            raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}. Please check your Streamlit secrets configuration.")
 
 
 def sidebar_ingest() -> None:
