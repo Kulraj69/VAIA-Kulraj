@@ -67,6 +67,15 @@ def load_secrets_to_env():
                 os.environ["MONGODB_URI"] = st.secrets["mongodb"]["uri"]
             if "database" in st.secrets["mongodb"]:
                 os.environ["MONGO_DB_NAME"] = st.secrets["mongodb"]["database"]
+        
+        # ChromaDB secrets
+        if "chromadb" in st.secrets:
+            if "api_key" in st.secrets["chromadb"]:
+                os.environ["CHROMA_API_KEY"] = st.secrets["chromadb"]["api_key"]
+            if "tenant" in st.secrets["chromadb"]:
+                os.environ["CHROMA_TENANT"] = st.secrets["chromadb"]["tenant"]
+            if "database" in st.secrets["chromadb"]:
+                os.environ["CHROMA_DATABASE"] = st.secrets["chromadb"]["database"]
     except AttributeError:
         # Secrets not available, try loading from .env as fallback
         from dotenv import load_dotenv
