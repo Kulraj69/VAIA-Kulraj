@@ -17,7 +17,16 @@ import numpy as np
 import httpx
 from pypdf import PdfReader
 from pymongo import MongoClient, UpdateOne
-from scipy.spatial.distance import cosine
+def _cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    """Compute cosine similarity between two vectors using NumPy.
+    Returns 0.0 if either vector has zero norm.
+    """
+    a = vec_a.astype(np.float32, copy=False)
+    b = vec_b.astype(np.float32, copy=False)
+    denom = np.linalg.norm(a) * np.linalg.norm(b)
+    if denom == 0.0:
+        return 0.0
+    return float(np.dot(a, b) / denom)
 
 
 # ============================================================================
@@ -221,10 +230,9 @@ def similarity_search(query_embedding: np.ndarray, top_k: int, collection_name: 
             if len(doc_embedding) == 0 or len(doc_embedding) != len(query_vec):
                 continue
             
-            # Compute cosine similarity (1 - cosine distance)
+            # Compute cosine similarity
             try:
-                cosine_dist = cosine(query_vec, doc_embedding)
-                similarity_score = 1.0 - cosine_dist
+                similarity_score = _cosine_similarity(query_vec, doc_embedding)
             except Exception:
                 continue
             
