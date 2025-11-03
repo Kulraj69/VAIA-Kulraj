@@ -479,68 +479,10 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="📄", layout="wide", initial_sidebar_state="expanded")
     
     # Force dark mode
-    st.markdown("""
-    <style>
-        .stApp { background-color: #0E1117; color: #E5E7EB; }
-        .main .block-container { background-color: #0E1117; }
-        [data-testid="stHeader"] { background: transparent; }
-        h1, h2, h3, h4, h5, h6 { color: #FAFAFA; }
-        .stRadio label, .stCheckbox label, .stTextArea label { color: #F3F4F6; }
-        /* Disabled controls readability */
-        .stRadio [aria-disabled="true"], .stCheckbox [aria-disabled="true"] { color: #9CA3AF !important; opacity: 0.8; }
-
-        /* Improve alert contrast */
-        div[role="alert"] { background-color: #111827 !important; color: #E5E7EB !important; border: 1px solid #374151; }
-        div[role="alert"] p, div[role="alert"] span { color: #E5E7EB !important; }
-        /* Left accent bar */
-        div[role="alert"] { border-left: 4px solid #22D3EE; }
-
-        /* Sidebar colors */
-        [data-testid="stSidebar"] { background-color: #0E1117; }
-        [data-testid="stSidebar"] * { color: #E5E7EB; }
-        /* Uploader dropzone */
-        [data-testid="stFileUploaderDropzone"] { background: #0B1220; border: 1px dashed #475569; color: #E5E7EB; }
-        [data-testid="stFileUploaderDropzone"] * { color: #E5E7EB; }
-
-        /* Inputs on dark background */
-        input, textarea, select { background-color: #111827 !important; color: #F3F4F6 !important; border-color: #374151 !important; }
-        ::placeholder { color: #9CA3AF !important; }
-        .stButton>button { background: #1F2937; color: #F9FAFB; border: 1px solid #374151; }
-        .stButton>button:hover { background: #374151; border-color: #4B5563; }
-
-        /* Markdown text contrast */
-        [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li { color: #E5E7EB; }
-    </style>
-    """, unsafe_allow_html=True)
+    # Removed custom global UI overrides; use Streamlit defaults
 
     # CSS for chat input visibility
-    st.markdown("""
-    <style>
-        input[data-testid="stChatInputTextInput"],
-        textarea[data-testid="stChatInputTextInput"],
-        .stChatInput input,
-        .stChatInput textarea {
-            color: rgba(250, 250, 250, 1) !important;
-            background-color: #0B1220 !important;
-            border-color: #334155 !important;
-        }
-        [data-testid="stAppViewContainer"] {
-            --text-color: rgba(49, 51, 63, 1);
-        }
-        .stApp[data-theme="dark"] input[data-testid="stChatInputTextInput"],
-        .stApp[data-theme="dark"] textarea[data-testid="stChatInputTextInput"] {
-            color: rgba(250, 250, 250, 1) !important;
-            background-color: #0B1220 !important;
-        }
-        .stApp[data-theme="light"] input[data-testid="stChatInputTextInput"],
-        .stApp[data-theme="light"] textarea[data-testid="stChatInputTextInput"] {
-            color: rgba(49, 51, 63, 1) !important;
-        }
-        .stChatInput { background-color: #0F172A !important; border: 1px solid #334155; border-radius: 8px; }
-        .stChatInput button { background: #2563EB !important; color: #F9FAFB !important; border: 0 !important; }
-        .stChatInput button:hover { background: #1D4ED8 !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    # Removed chat input custom styles
 
     # Sidebar
     sidebar_ingest()
