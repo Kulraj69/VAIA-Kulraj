@@ -481,26 +481,35 @@ def main() -> None:
     # Force dark mode
     st.markdown("""
     <style>
-        .stApp { background-color: #0E1117; color: #FAFAFA; }
+        .stApp { background-color: #0E1117; color: #E5E7EB; }
         .main .block-container { background-color: #0E1117; }
+        [data-testid="stHeader"] { background: transparent; }
         h1, h2, h3, h4, h5, h6 { color: #FAFAFA; }
-        .stRadio label, .stCheckbox label, .stTextArea label { color: #FAFAFA; }
+        .stRadio label, .stCheckbox label, .stTextArea label { color: #F3F4F6; }
+        /* Disabled controls readability */
+        .stRadio [aria-disabled="true"], .stCheckbox [aria-disabled="true"] { color: #9CA3AF !important; opacity: 0.8; }
 
-        /* Improve alert contrast across info/warning/success/error */
-        div[role="alert"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #334155; }
-        /* Specific accents for different statuses via left border */
-        div[role="alert"].stAlert { border-left: 4px solid #0EA5E9; }
-        div[role="alert"][data-baseweb="notification"] { border-left: 4px solid #EAB308; }
+        /* Improve alert contrast */
+        div[role="alert"] { background-color: #111827 !important; color: #E5E7EB !important; border: 1px solid #374151; }
+        div[role="alert"] p, div[role="alert"] span { color: #E5E7EB !important; }
+        /* Left accent bar */
+        div[role="alert"] { border-left: 4px solid #22D3EE; }
 
         /* Sidebar colors */
         [data-testid="stSidebar"] { background-color: #0E1117; }
-        [data-testid="stSidebar"] * { color: #FAFAFA; }
+        [data-testid="stSidebar"] * { color: #E5E7EB; }
+        /* Uploader dropzone */
+        [data-testid="stFileUploaderDropzone"] { background: #0B1220; border: 1px dashed #475569; color: #E5E7EB; }
+        [data-testid="stFileUploaderDropzone"] * { color: #E5E7EB; }
 
         /* Inputs on dark background */
         input, textarea, select { background-color: #111827 !important; color: #F3F4F6 !important; border-color: #374151 !important; }
         ::placeholder { color: #9CA3AF !important; }
         .stButton>button { background: #1F2937; color: #F9FAFB; border: 1px solid #374151; }
         .stButton>button:hover { background: #374151; border-color: #4B5563; }
+
+        /* Markdown text contrast */
+        [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li { color: #E5E7EB; }
     </style>
     """, unsafe_allow_html=True)
 
