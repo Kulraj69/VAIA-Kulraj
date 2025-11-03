@@ -481,47 +481,26 @@ def main() -> None:
     # Force dark mode
     st.markdown("""
     <style>
-        .stApp {
-            background-color: #0E1117;
-            color: #FAFAFA;
-        }
-        .main .block-container {
-            background-color: #0E1117;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            color: #FAFAFA;
-        }
-        .stRadio label {
-            color: #FAFAFA;
-        }
-        .stCheckbox label {
-            color: #FAFAFA;
-        }
-        .stTextArea label {
-            color: #FAFAFA;
-        }
-        .stInfo {
-            background-color: #1E293B;
-            color: #FAFAFA;
-        }
-        .stWarning {
-            background-color: #78350F;
-            color: #FAFAFA;
-        }
-        .stSuccess {
-            background-color: #065F46;
-            color: #FAFAFA;
-        }
-        .stError {
-            background-color: #991B1B;
-            color: #FAFAFA;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #0E1117;
-        }
-        [data-testid="stSidebar"] * {
-            color: #FAFAFA;
-        }
+        .stApp { background-color: #0E1117; color: #FAFAFA; }
+        .main .block-container { background-color: #0E1117; }
+        h1, h2, h3, h4, h5, h6 { color: #FAFAFA; }
+        .stRadio label, .stCheckbox label, .stTextArea label { color: #FAFAFA; }
+
+        /* Improve alert contrast across info/warning/success/error */
+        div[role="alert"] { background-color: #1E293B !important; color: #F8FAFC !important; border: 1px solid #334155; }
+        /* Specific accents for different statuses via left border */
+        div[role="alert"].stAlert { border-left: 4px solid #0EA5E9; }
+        div[role="alert"][data-baseweb="notification"] { border-left: 4px solid #EAB308; }
+
+        /* Sidebar colors */
+        [data-testid="stSidebar"] { background-color: #0E1117; }
+        [data-testid="stSidebar"] * { color: #FAFAFA; }
+
+        /* Inputs on dark background */
+        input, textarea, select { background-color: #111827 !important; color: #F3F4F6 !important; border-color: #374151 !important; }
+        ::placeholder { color: #9CA3AF !important; }
+        .stButton>button { background: #1F2937; color: #F9FAFB; border: 1px solid #374151; }
+        .stButton>button:hover { background: #374151; border-color: #4B5563; }
     </style>
     """, unsafe_allow_html=True)
 
