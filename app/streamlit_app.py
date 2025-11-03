@@ -521,6 +521,8 @@ def main() -> None:
         .stChatInput input,
         .stChatInput textarea {
             color: rgba(250, 250, 250, 1) !important;
+            background-color: #0B1220 !important;
+            border-color: #334155 !important;
         }
         [data-testid="stAppViewContainer"] {
             --text-color: rgba(49, 51, 63, 1);
@@ -528,11 +530,15 @@ def main() -> None:
         .stApp[data-theme="dark"] input[data-testid="stChatInputTextInput"],
         .stApp[data-theme="dark"] textarea[data-testid="stChatInputTextInput"] {
             color: rgba(250, 250, 250, 1) !important;
+            background-color: #0B1220 !important;
         }
         .stApp[data-theme="light"] input[data-testid="stChatInputTextInput"],
         .stApp[data-theme="light"] textarea[data-testid="stChatInputTextInput"] {
             color: rgba(49, 51, 63, 1) !important;
         }
+        .stChatInput { background-color: #0F172A !important; border: 1px solid #334155; border-radius: 8px; }
+        .stChatInput button { background: #2563EB !important; color: #F9FAFB !important; border: 0 !important; }
+        .stChatInput button:hover { background: #1D4ED8 !important; }
     </style>
     """, unsafe_allow_html=True)
 
