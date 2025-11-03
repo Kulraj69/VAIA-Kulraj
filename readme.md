@@ -357,28 +357,24 @@ docker run -p 8000:8000 --env-file .env vaia-analyst
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 ```
 
-## 📚 Design Decisions
+## 📚 Design Decisions (Crucial)
 
-### Vector Database: ChromaDB
-
-**Why ChromaDB?**
-- Native vector search optimized for embeddings
-- Cloud-hosted with automatic scaling
-- Simple API without index management
-- Efficient pricing for vector workloads
-
-**Migration:** Previously used MongoDB → ChromaDB for better performance
-
-### Agent Architecture
-
-**Reasoning → Acting Pattern:**
-1. Router analyzes query intent
-2. Selects best specialized agent
-3. Enhances query for better retrieval
-4. Agent processes with domain expertise
-5. Returns contextualized answer
+### Chunking Strategy
+- **Size = 2000 chars, Overlap = 200 chars.** Market PDFs mix prose, bullets, and tables. 2k characters balance: (a) enough context to preserve semantic units like “trend + driver + metric”, (b) small enough for efficient embedding and retrieval. A 10% overlap preserves boundary continuity to avoid cutting facts mid-paragraph.
+- **Metadata:** `section`, `chunk_id`, `source_file` are stored to enable file-scoped retrieval and transparent source citations in responses.
 
 ### Embedding Model
+- **Azure OpenAI text-embedding-3-small (1536-d).** It offers a strong latency/quality tradeoff and reliable cosine-distance behavior for RAG. The dimensionality is sufficient for diverse market language while keeping index size small and query latencies low.
+
+### Vector Database
+- **ChromaDB Cloud.** Chosen for: (1) hosted simplicity (no index management), (2) mature cosine similarity support and metadata filtering, (3) good latency at small-to-medium scale, (4) straightforward Python client that works well with asyncio.
+
+### Data Extraction Prompt (JSON-only)
+We enforce a strict instruction so the LLM returns parseable JSON for dashboards/automation:
+
+```
+Return ONLY a single JSON object. If info is missing, use nulls or empty arrays.
+```
 
 **Azure OpenAI text-embedding-3-small**
 - 1536 dimensions
@@ -386,11 +382,14 @@ gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 - High-quality retrieval
 - Production-ready
 
-### Chunking Strategy
+### Agent Architecture
+- **Reasoning → Acting** with specialized prompts:
+  1) Router classifies intent (TRENDS | STRATEGY | ANALYSIS)
+  2) Query is enhanced per agent to bias retrieval
+  3) Agent-specific system prompt frames the final answer
+  4) Sources are returned for transparency
 
-- Size: 2000 characters
-- Overlap: 200 characters
-- Metadata: section, chunk_id, source_file
+This mirrors market.pdf expectations: trends and growth dynamics, actionable strategy, and deep competitive/SWOT analysis.
 
 ## 🔒 Security
 
